@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>字幕生成</title>
+</head>
+<body>
+<h1>椿辉近实时字幕生成工具</h1>
+<div>
+  <div style="width: 700px; float: left; display: block">
+    <video id="video" autoplay></video>
+    <button id="startButton" onclick="startGenerageSubtitle()">启动字幕生成</button>
+    <button id="stopButton"  onclick="stopGenerageSubtitle()">停止生成字幕</button>
+    <button id="clearButton"  onclick="clearGenerageSubtitle()">清空字幕</button>
+    <p id="subtitle" style="text-align: center"></p>
+  </div>
+  <div  style="width: 500px; float: left; display: block">
+    <h3>所有字幕</h3>
+    <p id="result"></p>
+  </div>
+</div>
+
+<script>
+  const video = document.getElementById('video');
+  const result = document.getElementById('result');
+  const subtitle = document.getElementById('subtitle');
+  let ws = null;
+  let mediaRecorder = null;
+  let isRecording = false;
+  let intervalId = null;
+  // 获取用户媒体设备
+  navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+          .then((stream) => {
+            console.log("ws ===>", ws);
+            ws = new WebSocket('ws://localhost:8080');
+            video.srcObject = stream;
+            // 建立WebSocket连接
+            ws.onopen = function (){
+              console.log('===> WebSocket连接已经建立');
+            };
+            ws.onmessage = function(map) {
+              let newP = document.createElement("p");//创建一个p标签
+              newP.innerText = map.data;
+              result.appendChild(newP);
+              subtitle.textContent = map.data;
+              console.log(map.data);
+            }
+          })
+          .catch((err) => {
+            console.log(err);
+          });
+  // 启动字幕生成
+  function startGenerageSubtitle() {
+    if (isRecording) {
+      console.log('===> 已经在生成字幕');
+      return;
+    }
+    console.log('===> 开始生成字幕');
+    isRecording = true;
+    // 获取用户媒体设备
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then((stream) => {
+              console.log("每3秒发送一次视频流数据")
+              // 每3秒发送一次视频流数据
+              intervalId = setInterval(() => {
+                const mediaRecorder = new MediaRecorder(stream, {
+                  mimeType: 'video/webm;codecs=h264'
+                });
+                mediaRecorder.addEventListener('dataavailable', (event) => {
+                  if (event.data.size > 0) {
+                    // 发送数据到后端
+                    ws.send(event.data);
+                  }
+                });
+                mediaRecorder.start();
+                // console.log("mediaRecorder.start===", mediaRecorder)
+                setTimeout(() => {
+                  // console.log("mediaRecorder.stop===", mediaRecorder)
+                  mediaRecorder.stop();
+                }, 3000);
+              }, 3000);
+            })
+            .catch((err) => {
+              console.log(err);
+            });
+  }
+  // 停止生成字幕
+  function stopGenerageSubtitle() {
+    if (!isRecording) {
+      console.log('===> 没有在生成字幕');
+      return;
+    }
+    console.log('===> 停止生成字幕');
+    isRecording = false;
+    clearInterval(intervalId);
+    // mediaRecorder.stop();
+  }
+
+  // 清空字幕
+  function clearGenerageSubtitle() {
+    subtitle.textContent = "";
+    result.innerHTML = "<p></p>";
+  }
+</script>
+</body>
+</html>

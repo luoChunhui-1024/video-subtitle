@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="UTF-8">
+<head>
+    <title>字幕生成</title>
+</head>
+<body>
+<h1>椿辉近实时字幕生成工具</h1>
+
+<div>
+    <video id="video" autoplay></video>
+    <p id="result"></p>
+</div>
+<script>
+    const video = document.getElementById('video');
+    const result = document.getElementById('result');
+    let ws = null;
+    // 获取用户媒体设备
+    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+            console.log("ws ===>", ws);
+            ws = new WebSocket('ws://localhost:8080');
+            video.srcObject = stream;
+
+            // ws = new WebSocket('ws://localhost:8080');
+            // 建立WebSocket连接
+            ws.onopen = function (){
+                console.log('===> WebSocket连接已经建立');
+                // 每5秒发送一次视频流数据
+                setInterval(() => {
+                    const mediaRecorder = new MediaRecorder(stream, {
+                        mimeType: 'video/webm;codecs=h264'
+                    });
+                    mediaRecorder.addEventListener('dataavailable', (event) => {
+                        if (event.data.size > 0) {
+                            // 发送数据到后端
+                            ws.send(event.data);
+                        }
+                    });
+                    mediaRecorder.start();
+                    console.log("mediaRecorder.start===", mediaRecorder)
+                    setTimeout(() => {
+                        console.log("mediaRecorder.stop===", mediaRecorder)
+                        mediaRecorder.stop();
+                    }, 3000);
+                }, 3000);
+            };
+            ws.onmessage = function(map) {
+                console.log("event==========>", map.data)
+                // const data = JSON.parse(map.data);
+                // console.log("字幕==========>", data)
+                // result.append(<p>map.data</p>);
+                let newP = document.createElement("p");//创建一个p标签
+                // newP.id = "newP";
+                newP.innerText = map.data;
+                result.appendChild(newP);
+                // result.textContent  += map.data + "\n\r";
+            }
+
+        })
+        .catch((err) => {
+            console.log(err);
+        });
+
+</script>
+<div>
+    <button id="startButton" onclick="startGenerageSubtitle()">启动字幕生成</button>
+    <button id="stopButton"  onclick="stopGenerageSubtitle()">停止生成字幕</button>
+</div>
+</body>
+</html>

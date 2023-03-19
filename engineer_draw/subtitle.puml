@@ -1,0 +1,34 @@
+@startuml
+
+box "视频字幕自动生成时序图"
+participant fontend
+participant backend
+
+activate backend
+fontend -> backend: 1、视频流（每三秒钟发送一次）
+
+
+' activate backend
+backend -> backend: 2、视频流保存成本地文件
+
+backend -> backend: 3、调用 <font color=red>ffmpeg</font> 提取出视频文件中的音频
+' deactivate backend
+
+
+backend -> Ali_OSS: 4、音频上传到阿里 OSS 
+activate Ali_OSS
+backend <-- Ali_OSS: 音频在对象存储中的文件名
+deactivate  Ali_OSS
+
+backend -> backend: 5、根据音频文件名拼接 bucket 域名得到音频地址
+
+backend -> Ali_Speech_Interaction: 6、调用阿里语音识别 SDK，音频地址
+activate Ali_Speech_Interaction
+backend <-- Ali_Speech_Interaction: 语音文字信息
+deactivate Ali_Speech_Interaction
+
+
+fontend <-- backend: 7、字幕（视频流中语音对应的文字）
+deactivate backend
+
+@enduml
