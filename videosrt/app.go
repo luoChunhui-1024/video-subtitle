@@ -180,14 +180,14 @@ func UploadAudioToClound(target oss.AliyunOss, audioFile string) string {
 	name := ""
 	//提取文件名称
 	if fileInfo, e := os.Stat(audioFile); e != nil {
-		panic(e)
+		Log("oss 文件名称解析失败 ...", e)
 	} else {
 		name = fileInfo.Name()
 	}
 
 	//上传
 	if file, e := target.UploadFile(audioFile, name); e != nil {
-		panic(e)
+		panic(fmt.Sprintf("oss 文件上传失败 %v", e))
 	} else {
 		return file
 	}
@@ -198,7 +198,7 @@ func AliyunAudioRecognition(engine cloud.AliyunClound, filelink string, intellig
 	//创建识别请求
 	taskid, client, e := engine.NewAudioFile(filelink)
 	if e != nil {
-		panic(e)
+		Log("智能语音接口调用失败 ...", e)
 	}
 
 	AudioResult = make(map[int64][]*cloud.AliyunAudioRecognitionResult)
@@ -261,7 +261,7 @@ func AliyunAudioRecognition(engine cloud.AliyunClound, filelink string, intellig
 				}
 			}, "Result", "Sentences")
 			if err != nil {
-				panic(err)
+				Log("字幕信息解析发生错误 ...", e)
 			}
 		}
 	})
